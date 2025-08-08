@@ -12,5 +12,5 @@ urlpatterns = [
     path("api/", include(router.urls)),
     path("api/lessons/", include("lms.urls")),
     path("", api_root, name="api-root"),
-    path('api/', include('users.urls')),
+    path("api/", include("users.urls")),
 ]

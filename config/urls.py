@@ -5,11 +5,11 @@ from lms.views import CourseViewSet
 from .views import api_root
 
 router = DefaultRouter()
-router.register(r'courses', CourseViewSet, basename='course')
+router.register(r"courses", CourseViewSet, basename="course")
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
-    path('api/lessons/', include('lms.urls')),
-    path('', api_root, name='api-root'),
+    path("admin/", admin.site.urls),
+    path("api/", include(router.urls)),
+    path("api/lessons/", include("lms.urls")),
+    path("", api_root, name="api-root"),
 ]

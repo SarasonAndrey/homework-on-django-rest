@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 
+
 def api_root(request):
     return HttpResponse(
         """
@@ -10,5 +11,5 @@ def api_root(request):
             <li><a href='/api/lessons/'>Уроки</a></li>
         </ul>
         """,
-        content_type="text/html; charset=utf-8"
+        content_type="text/html; charset=utf-8",
     )

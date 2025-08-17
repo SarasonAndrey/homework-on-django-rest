@@ -13,5 +13,5 @@ urlpatterns = [
     path("api/lessons/", include("lms.urls")),
     path("", api_root, name="api-root"),
     path("api/", include("users.urls")),
-    path('api/lms/', include('lms.urls')),
+    path("api/lms/", include("lms.urls")),
 ]

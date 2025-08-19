@@ -4,14 +4,6 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Course, Lesson
 from .permissions import IsModerator, IsOwner
 from .serializers import CourseSerializer, LessonSerializer
-from rest_framework.generics import (
-    ListAPIView,
-    RetrieveAPIView,
-    CreateAPIView,
-    UpdateAPIView,
-    DestroyAPIView,
-    get_object_or_404,
-)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -21,10 +13,17 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action == "create":
-            return [IsAuthenticated(), ~IsModerator]
+            permission_classes = [IsAuthenticated, ~IsModerator]
         elif self.action == "destroy":
-            return [IsAuthenticated(), ~IsModerator]
-        return [IsAuthenticated()]
+            permission_classes = [IsAuthenticated, IsOwner]
+        elif self.action == "retrieve":
+            permission_classes = [IsAuthenticated, IsOwner | IsModerator]
+        elif self.action in ["update", "partial_update"]:
+            permission_classes = [IsAuthenticated, IsOwner | IsModerator]
+        else:  # list
+            permission_classes = [IsAuthenticated]
+
+        return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -36,47 +35,29 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Course.objects.filter(owner=self.request.user)
 
 
-class LessonListAPIView(generics.ListAPIView):
+class LessonViewSet(viewsets.ModelViewSet):
+    queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.groups.filter(name="moderators").exists():
+        user = self.request.user
+        if user.groups.filter(name="moderators").exists():
             return Lesson.objects.all()
-        return Lesson.objects.filter(owner=self.request.user)
-
-
-class LessonRetrieveAPIView(generics.RetrieveAPIView):
-    queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
-    permission_classes = [IsAuthenticated]
-
-
-class LessonCreateAPIView(generics.CreateAPIView):
-    queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
-    permission_classes = [IsAuthenticated, ~IsModerator]
-
-    def perform_create(self, serializer):
-        lesson = serializer.save(owner=self.request.user)
-        # Привязываем урок к курсу
-        course = get_object_or_404(Course, id=self.request.data.get("course"))
-        lesson.course = course
-        lesson.save()
-
-
-class LessonUpdateAPIView(generics.UpdateAPIView):
-    queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
-    permission_classes = [IsAuthenticated]
+        return Lesson.objects.filter(owner=user)
 
     def get_permissions(self):
-        if self.request.user.groups.filter(name="moderators").exists():
-            return [IsAuthenticated()]
-        return [IsAuthenticated(), IsOwner()]
+        if self.action == "create":
+            permission_classes = [IsAuthenticated, ~IsModerator]
+        elif self.action == "destroy":
+            permission_classes = [IsAuthenticated, IsOwner]
+        elif self.action == "retrieve":
+            permission_classes = [IsAuthenticated, IsOwner | IsModerator]
+        elif self.action in ["update", "partial_update"]:
+            permission_classes = [IsAuthenticated, IsOwner | IsModerator]
+        else:
+            permission_classes = [IsAuthenticated]
 
+        return [permission() for permission in permission_classes]
 
-class LessonDestroyAPIView(generics.DestroyAPIView):
-    queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
-    permission_classes = [IsAuthenticated, ~IsModerator, IsOwner]
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)

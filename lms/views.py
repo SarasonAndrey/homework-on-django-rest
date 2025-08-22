@@ -1,12 +1,19 @@
-from rest_framework import viewsets, generics
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, generics, status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from .models import Course, Lesson
+from .models import Course, Lesson, Subscription
+from .paginators import MyPagination
 from .permissions import IsModerator, IsOwner
 from .serializers import CourseSerializer, LessonSerializer
 
 
 class CourseViewSet(viewsets.ModelViewSet):
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+    pagination_class = MyPagination
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
@@ -38,6 +45,9 @@ class CourseViewSet(viewsets.ModelViewSet):
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
+    pagination_class = MyPagination
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -61,3 +71,29 @@ class LessonViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def subscribe_to_course(request, course_id):
+    """
+    Подписаться на курс
+    """
+    course = get_object_or_404(Course, id=course_id)
+    subscription, created = Subscription.objects.get_or_create(user=request.user, course=course)
+
+    if created:
+        return Response({"message": "Подписка оформлена"}, status=status.HTTP_201_CREATED)
+    return Response({"message": "Вы уже подписаны"}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def unsubscribe_from_course(request, course_id):
+    """
+    Отписаться от курса
+    """
+    course = get_object_or_404(Course, id=course_id)
+    Subscription.objects.filter(user=request.user, course=course).delete()
+    return Response({"message": "Подписка отменена"}, status=status.HTTP_204_NO_CONTENT)

@@ -76,24 +76,20 @@ class LessonViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def subscribe_to_course(request, course_id):
+def toggle_subscription(request, course_id):
     """
-    Подписаться на курс
+    Подписаться или отписаться от курса
+    Если подписка есть — удалит, если нет — создаст
     """
     course = get_object_or_404(Course, id=course_id)
-    subscription, created = Subscription.objects.get_or_create(user=request.user, course=course)
+    subscription, created = Subscription.objects.get_or_create(
+        user=request.user,
+        course=course
+    )
 
     if created:
         return Response({"message": "Подписка оформлена"}, status=status.HTTP_201_CREATED)
-    return Response({"message": "Вы уже подписаны"}, status=status.HTTP_200_OK)
 
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def unsubscribe_from_course(request, course_id):
-    """
-    Отписаться от курса
-    """
-    course = get_object_or_404(Course, id=course_id)
-    Subscription.objects.filter(user=request.user, course=course).delete()
+    # Удаляем подписку
+    subscription.delete()
     return Response({"message": "Подписка отменена"}, status=status.HTTP_204_NO_CONTENT)

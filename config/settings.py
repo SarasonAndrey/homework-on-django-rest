@@ -2,8 +2,8 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -12,6 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -25,6 +26,7 @@ INSTALLED_APPS = [
     "users",
     "lms",
     "rest_framework_simplejwt",
+    "drf_yasg",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -93,6 +95,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
@@ -107,10 +112,10 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
 }
 
-if 'test' in sys.argv or 'pytest' in sys.argv:
+if "test" in sys.argv or "pytest" in sys.argv:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': 'test_db.sqlite3',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": "test_db.sqlite3",
         }
     }

@@ -1,5 +1,5 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class Course(models.Model):
@@ -8,6 +8,7 @@ class Course(models.Model):
         upload_to="course_previews/", blank=True, null=True, verbose_name="Превью"
     )
     description = models.TextField(blank=True, null=True, verbose_name="Описание")
+    created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -18,6 +19,7 @@ class Course(models.Model):
     class Meta:
         verbose_name = "Курс"
         verbose_name_plural = "Курсы"
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.title
@@ -47,23 +49,41 @@ class Lesson(models.Model):
     def __str__(self):
         return self.title
 
+
 class Subscription(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        verbose_name="Пользователь"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
-    course = models.ForeignKey(
-        Course,
-        on_delete=models.CASCADE,
-        verbose_name="Курс"
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name="Курс")
+    subscribed_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Дата подписки"
     )
-    subscribed_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата подписки")
 
     class Meta:
         verbose_name = "Подписка"
         verbose_name_plural = "Подписки"
-        unique_together = ('user', 'course')
+        unique_together = ("user", "course")
 
     def __str__(self):
         return f"{self.user.email} → {self.course.title}"
+
+
+class Payment(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="lms_payments"
+    )
+    paid_course = models.ForeignKey(
+        Course, on_delete=models.CASCADE, null=True, blank=True, related_name="payments"
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=20, default="transfer")
+    stripe_session_id = models.CharField(max_length=150, blank=True, null=True)
+    stripe_link = models.URLField(max_length=400, blank=True, null=True)
+    payment_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Платеж"
+        verbose_name_plural = "Платежи"
+
+    def __str__(self):
+        return f"{self.user.email} — {self.amount} руб."

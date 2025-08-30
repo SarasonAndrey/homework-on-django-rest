@@ -1,5 +1,6 @@
+import stripe
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets, generics, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,9 +9,19 @@ from .models import Course, Lesson, Subscription
 from .paginators import MyPagination
 from .permissions import IsModerator, IsOwner
 from .serializers import CourseSerializer, LessonSerializer
+from .services import create_stripe_session
 
 
 class CourseViewSet(viewsets.ModelViewSet):
+    """
+    Управление курсами.
+
+    - GET /courses/ — список
+    - POST /courses/ — создание (не модератор)
+    - PUT/PATCH /courses/1/ — редактирование
+    - DELETE /courses/1/ — удаление (только владелец)
+    """
+
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     pagination_class = MyPagination
@@ -73,8 +84,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user)
 
 
-
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def toggle_subscription(request, course_id):
     """
@@ -83,13 +93,30 @@ def toggle_subscription(request, course_id):
     """
     course = get_object_or_404(Course, id=course_id)
     subscription, created = Subscription.objects.get_or_create(
-        user=request.user,
-        course=course
+        user=request.user, course=course
     )
 
     if created:
-        return Response({"message": "Подписка оформлена"}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"message": "Подписка оформлена"}, status=status.HTTP_201_CREATED
+        )
 
-    # Удаляем подписку
     subscription.delete()
     return Response({"message": "Подписка отменена"}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_payment(request, course_id):
+    """Создать сессию оплаты"""
+    course = get_object_or_404(Course, id=course_id)
+    result = create_stripe_session(course, request.user)
+    return Response(result, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_payment_status(request, session_id):
+    """Получить статус платежа из Stripe"""
+    session = stripe.checkout.Session.retrieve(session_id)
+    return Response({"status": session.payment_status})

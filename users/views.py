@@ -1,17 +1,17 @@
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework import generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
+from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied
-from .models import User, Payment
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from .models import Payment, User
 from .permissions import IsOwnerOrAdmin
 from .serializers import (
-    UserRegisterSerializer,
     MyTokenObtainPairSerializer,
-    UserSerializer,
     PaymentSerializer,
+    UserRegisterSerializer,
+    UserSerializer,
 )
-
 
 User = get_user_model()
 

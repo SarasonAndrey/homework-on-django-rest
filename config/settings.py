@@ -3,9 +3,16 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+CELERY_TIMEZONE = os.getenv("CELERY_TIMEZONE", "Europe/Moscow")
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,6 +34,7 @@ INSTALLED_APPS = [
     "lms",
     "rest_framework_simplejwt",
     "drf_yasg",
+    "django_celery_beat",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -119,3 +127,12 @@ if "test" in sys.argv or "pytest" in sys.argv:
             "NAME": "test_db.sqlite3",
         }
     }
+
+
+CELERY_BEAT_SCHEDULE = {
+    "deactivate-inactive-users": {
+        "task": "users.tasks.deactivate_inactive_users",
+        "schedule": crontab(day_of_month="1"),
+        # 'schedule': crontab(minute='*/1'), # Для тестов — каждую минуту
+    },
+}

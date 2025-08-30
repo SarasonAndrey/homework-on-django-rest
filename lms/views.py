@@ -10,6 +10,7 @@ from .paginators import MyPagination
 from .permissions import IsModerator, IsOwner
 from .serializers import CourseSerializer, LessonSerializer
 from .services import create_stripe_session
+from .tasks import send_course_update_notification
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -25,8 +26,6 @@ class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     pagination_class = MyPagination
-    queryset = Course.objects.all()
-    serializer_class = CourseSerializer
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
@@ -40,31 +39,26 @@ class CourseViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, IsOwner | IsModerator]
         else:  # list
             permission_classes = [IsAuthenticated]
-
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-    def get_queryset(self):
+    def perform_update(self, serializer):
+        course = serializer.save
+        send_course_update_notification.delay(course.id)
 
-        if self.request.user.groups.filter(name="moderators").exists():
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name="moderators").exists():
             return Course.objects.all()
-        return Course.objects.filter(owner=self.request.user)
+        return Course.objects.filter(owner=user)
 
 
 class LessonViewSet(viewsets.ModelViewSet):
     queryset = Lesson.objects.all()
     serializer_class = LessonSerializer
     pagination_class = MyPagination
-    queryset = Lesson.objects.all()
-    serializer_class = LessonSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.groups.filter(name="moderators").exists():
-            return Lesson.objects.all()
-        return Lesson.objects.filter(owner=user)
 
     def get_permissions(self):
         if self.action == "create":
@@ -77,11 +71,18 @@ class LessonViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated, IsOwner | IsModerator]
         else:
             permission_classes = [IsAuthenticated]
-
         return [permission() for permission in permission_classes]
 
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+    def perform_update(self, serializer):
+        lesson = serializer.save()
+        # Отправляем уведомление по курсу
+        send_course_update_notification.delay(lesson.course.id)
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.groups.filter(name="moderators").exists():
+            return Lesson.objects.all()
+        return Lesson.objects.filter(owner=user)
 
 
 @api_view(["POST"])
@@ -118,5 +119,10 @@ def create_payment(request, course_id):
 @permission_classes([IsAuthenticated])
 def get_payment_status(request, session_id):
     """Получить статус платежа из Stripe"""
-    session = stripe.checkout.Session.retrieve(session_id)
-    return Response({"status": session.payment_status})
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        return Response({"status": session.payment_status})
+    except stripe.error.InvalidRequestError:
+        return Response(
+            {"error": "Invalid session ID"}, status=status.HTTP_404_NOT_FOUND
+        )

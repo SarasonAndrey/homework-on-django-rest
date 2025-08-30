@@ -14,5 +14,5 @@ urlpatterns = [
         toggle_subscription,
         name="toggle-subscription",
     ),
-    path("payment/<int:course_id>/", create_payment, name="create-payment"),
+    path("courses/<int:course_id>/pay/", create_payment, name="create-payment"),
 ]

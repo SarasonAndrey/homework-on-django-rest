@@ -15,7 +15,6 @@ class Payment(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
-
     payment_date = models.DateTimeField(auto_now_add=True, verbose_name="Дата оплаты")
 
     paid_lesson = models.ForeignKey(
@@ -39,14 +38,26 @@ class Payment(models.Model):
         max_length=10, choices=PAYMENT_METHOD_CHOICES, verbose_name="Способ оплаты"
     )
 
+    # ✅ Добавлены поля для интеграции с Stripe
+    stripe_session_id = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        verbose_name="ID сессии Stripe"
+    )
+    stripe_link = models.URLField(
+        max_length=400,
+        blank=True,
+        null=True,
+        verbose_name="Ссылка на оплату"
+    )
+
     class Meta:
         verbose_name = "Платёж"
         verbose_name_plural = "Платежи"
 
     def __str__(self):
-        return (
-            f"{self.user.email} — {self.amount} ({self.get_payment_method_display()})"
-        )
+        return f"{self.user.email} — {self.amount} ({self.get_payment_method_display()})"
 
 
 class UserManager(BaseUserManager):

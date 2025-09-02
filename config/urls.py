@@ -5,11 +5,13 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
 
-from lms.views import CourseViewSet
+from lms.views import CourseViewSet, LessonViewSet
 from .views import api_root
 
 router = DefaultRouter()
 router.register(r"courses", CourseViewSet, basename="course")
+router.register(r"lessons", LessonViewSet, basename="lesson")
+
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -23,26 +25,20 @@ schema_view = get_schema_view(
     permission_classes=[permissions.AllowAny],
 )
 
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/", include("lms.urls")),
     path("", api_root, name="api-root"),
     path(
         "api/",
         include(
             [
-                path("", include(router.urls)),
-                path("users/", include("users.urls")),
-                path("lms/", include("lms.urls")),
+                path("", include(router.urls)),  # /api/courses/
+                path("users/", include("users.urls")),  # /api/users/register/
+                path("lms/", include("lms.urls")),  # /api/lms/lessons/
             ]
         ),
     ),
-    re_path(
-        r"^swagger/$",
-        schema_view.with_ui("swagger", cache_timeout=0),
-        name="schema-swagger-ui",
-    ),
-    re_path(
-        r"^redoc/$", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"
-    ),
+    re_path(r"^swagger/$", schema_view.with_ui("swagger"), name="schema-swagger-ui"),
+    re_path(r"^redoc/$", schema_view.with_ui("redoc"), name="schema-redoc"),
 ]

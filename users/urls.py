@@ -6,6 +6,7 @@ from .views import (
     UserRetrieveAPIView,
     UserUpdateAPIView,
     UserDeleteAPIView,
+    create_payment,
 )
 
 app_name = "users"
@@ -17,4 +18,5 @@ urlpatterns = [
     path("users/<int:pk>/", UserRetrieveAPIView.as_view(), name="user-detail"),
     path("users/<int:pk>/update/", UserUpdateAPIView.as_view(), name="user-update"),
     path("users/<int:pk>/delete/", UserDeleteAPIView.as_view(), name="user-delete"),
+    path("payment/<int:course_id>/", create_payment, name="create-payment"),
 ]

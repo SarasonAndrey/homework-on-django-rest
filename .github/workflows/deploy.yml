@@ -1,0 +1,65 @@
+name: Django CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - develop_35.2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DEBUG: 'True'
+      SECRET_KEY: django-insecure-ci-key-for-tests-only
+      DB_ENGINE: django.db.backends.sqlite3
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        run: python manage.py migrate
+
+      - name: Run tests
+        run: python manage.py test
+
+      - name: Test coverage report
+        run: |
+          pip install coverage
+          coverage run --source='.' manage.py test
+          coverage report
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop_35.2'  # Деплой только с main
+
+    steps:
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy to server via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            cd ${{ secrets.DEPLOY_DIR }}
+            git pull origin main
+            source venv/bin/activate || {
+              python3 -m venv venv
+              source venv/bin/activate
+              pip install -r requirements.txt
+            }
+            python manage.py migrate
+            python manage.py collectstatic --noinput
+            sudo systemctl restart drf-app.service
+          EOF

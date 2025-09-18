@@ -106,15 +106,6 @@ def toggle_subscription(request, course_id):
     return Response({"message": "Подписка отменена"}, status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def create_payment(request, course_id):
-    """Создать сессию оплаты"""
-    course = get_object_or_404(Course, id=course_id)
-    result = create_stripe_session(course, request.user)
-    return Response(result, status=status.HTTP_201_CREATED)
-
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_payment_status(request, session_id):

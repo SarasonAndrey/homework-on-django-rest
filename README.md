@@ -176,7 +176,7 @@ CELERY_TIMEZONE=Europe/Moscow
    - Docker Compose
    - Git
 4. Проект развёрнут через ``` docker-compose up --build -d ```
-5. Сервер доступен по публичному IP
+5. Сервер доступен по публично
 
 # Документация API
 

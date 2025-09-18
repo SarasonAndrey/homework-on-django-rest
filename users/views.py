@@ -1,9 +1,14 @@
 from django.contrib.auth import get_user_model
-from rest_framework import generics
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from lms.models import Course
+from lms.services import create_stripe_session
 from .models import Payment, User
 from .permissions import IsOwnerOrAdmin
 from .serializers import (
@@ -63,3 +68,12 @@ class PaymentListAPIView(generics.ListAPIView):
         if user.groups.filter(name="moderators").exists() or user.is_staff:
             return Payment.objects.all()
         return Payment.objects.filter(user=user)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_payment(request, course_id):
+    """Создать сессию оплаты курса"""
+    course = get_object_or_404(Course, id=course_id)
+    result = create_stripe_session(course, request.user)
+    return Response(result, status=status.HTTP_201_CREATED)

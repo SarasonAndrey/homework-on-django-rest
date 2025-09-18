@@ -8,10 +8,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      DEBUG: 'True'
-      SECRET_KEY: django-insecure-ci-key-for-tests-only
-      DB_ENGINE: django.db.backends.sqlite3
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -26,17 +23,26 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Create .env for CI
+        run: |
+          cat > .env << EOF
+          DEBUG=True
+          SECRET_KEY=django-insecure-ci-key
+          ALLOWED_HOSTS=localhost,127.0.0.1
+
+          DB_ENGINE=django.db.backends.sqlite3
+          DB_NAME=db.sqlite3
+
+          CELERY_BROKER_URL=redis://localhost:6379/0
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          EOF
+
       - name: Run migrations
         run: python manage.py migrate
 
       - name: Run tests
         run: python manage.py test
-
-      - name: Test coverage report
-        run: |
-          pip install coverage
-          coverage run --source='.' manage.py test
-          coverage report
 
   deploy:
     needs: test

@@ -92,6 +92,91 @@ CELERY_TIMEZONE=Europe/Moscow
    ```
    celery -A config beat -l INFO
    ```
+   
+# Запуск через Docker Compose
+## Проект использует Docker для развёртывания всех сервисов.
+1. Соберите и запустите контейнеры
+
+   ```
+   docker-compose up --build -d
+   ```
+   
+2. Примените миграции (если не применены автоматически)
+   
+   ```
+   docker-compose exec web python manage.py migrate
+   ```
+   
+3. Соберите статику
+
+   ```
+   docker-compose exec web python manage.py collectstatic --noinput
+   ```
+   
+4. Создайте суперпользователя (для доступа к админке)
+
+   ```
+   docker-compose exec web python manage.py createsuperuser
+   ```
+   
+# Проверка работоспособности сервисов
+## После запуска проверьте каждый сервис:
+1. Проверьте статус контейнеров
+   ```
+   docker-compose ps
+   ```
+   Все сервисы должны быть в статусе Up
+2. Проверьте логи веб-сервера
+   ```
+   docker-compose logs web
+   ```
+   Должно быть: Starting development server at http://0.0.0.0:8000/
+3. Проверьте работу Celery
+   ```
+   docker-compose logs celery
+   ```
+   Должно быть: celery@... ready.
+                Connected to redis://redis:6379/0
+4. Проверьте Celery Beat
+   ```
+   docker-compose logs celery-beat
+   ```
+   Должно быть: beat: Starting...
+                      Scheduler: Ready to go!
+5. Проверьте PostgreSQL
+   ```
+   docker-compose exec db psql -U suser -d online_learning_platform
+   ```
+   После входа выполните: 
+   ```
+   \dt
+   ```
+6. Проверьте Redis
+   ```
+   docker-compose exec redis redis-cli PING
+   ```
+   Ожидаемый ответ: PONG
+
+# Доступ к приложению
+
+   Основное приложение: http://localhost:8000
+
+   Админка: http://localhost:8000/admin/
+
+   Swagger: http://localhost:8000/swagger/
+
+   ReDoc: http://localhost:8000/redoc/
+
+# Настройка удалённого сервера (Yandex Cloud)
+
+1. Создана ВМ с Ubuntu 24.04 LTS, 2 vCPU, 2 ГБ RAM
+2. Настроен SSH-доступ с использованием RSA-ключа (4096 бит)
+3. Установлены:
+   - Docker
+   - Docker Compose
+   - Git
+4. Проект развёрнут через ``` docker-compose up --build -d ```
+5. Сервер доступен по публично
 
 # Документация API
 

@@ -29,7 +29,7 @@ class UserRegisterView(generics.CreateAPIView):
 class UserListAPIView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]  # Или [IsAdminUser], если нужно
+    permission_classes = [IsAuthenticated]
 
 
 class UserRetrieveAPIView(generics.RetrieveAPIView):

@@ -1,55 +1,60 @@
-name: Django CI/CD Pipeline
+name: Deploy to Production
 
 on:
   push:
-    branches:
-      - develop_35.2  # или develop_34.2 — замени, если нужно
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      SECRET_KEY: django-insecure-ci-key
-      DEBUG: 'True'
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run tests
-        run: python manage.py test
+        run: |
+          python manage.py test --verbosity=2
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop_35.2'  # или develop_34.2
-
+    if: success()
     steps:
-      - name: Set up SSH
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH and deploy
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            cd ${{ secrets.DEPLOY_DIR }}
-            git pull origin main
-            source venv/bin/activate || {
-              python3 -m venv venv
-              source venv/bin/activate
-              pip install -r requirements.txt
-            }
-            python manage.py migrate
-            python manage.py collectstatic --noinput
-            sudo systemctl restart drf-app.service
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} -p ${{ secrets.SSH_PORT }} << 'EOF'
+          cd /home/ubuntu/lms
+
+          git fetch origin
+          git reset --hard origin/${{ github.ref_name }}
+
+          export DEBUG=False
+          export SECRET_KEY=${{ secrets.SECRET_KEY }}
+          export DB_NAME=${{ secrets.DB_NAME }}
+          export DB_USER=${{ secrets.DB_USER }}
+          export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          export STRIPE_API_KEY=${{ secrets.STRIPE_API_KEY }}
+          export CELERY_BROKER_URL=redis://localhost:6379/0
+          export CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+          python manage.py collectstatic --noinput
+          python manage.py migrate
+
+          sudo systemctl restart lms-web
+          sudo systemctl restart lms-celery-worker
+          echo "Деплой завершён"
           EOF

@@ -41,7 +41,8 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} -p ${{ secrets.SSH_PORT }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} -p ${{ secrets.SSH_PORT }} << 'EOF'
           echo "Начинаем деплой..."
 
           cd /home/ubuntu/homework-on-django-rest

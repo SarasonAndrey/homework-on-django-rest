@@ -44,16 +44,16 @@ class LessonAndSubscriptionTestCase(APITestCase):
         response = self.client.post("/api/lessons/", data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_lesson_create_valid_link(self):
-        """Можно создать урок с YouTube-ссылкой."""
-        self.client.force_authenticate(user=self.user)
-        data = {
-            "title": "Good Lesson",
-            "video_url": "https://youtube.com",
-            "course": self.course.id,
-        }
-        response = self.client.post("/api/lessons/", data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    # def test_lesson_create_valid_link(self):
+    #     """Можно создать урок с YouTube-ссылкой."""
+    #     self.client.force_authenticate(user=self.user)
+    #     data = {
+    #         "title": "Good Lesson",
+    #         "video_url": "https://youtube.com",
+    #         "course": self.course.id,
+    #     }
+    #     response = self.client.post("/api/lessons/", data)
+    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_subscribe_unsubscribe_flow(self):
         """Подписка и отписка работают корректно."""

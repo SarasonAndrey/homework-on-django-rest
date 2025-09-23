@@ -4,8 +4,10 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app
 
+# Создайте пользователя и директории
 RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
+    mkdir -p /app && \
+    mkdir -p /app/staticfiles
 
 WORKDIR /app
 
@@ -15,8 +17,14 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY . .
 
+# Установите права на все файлы
+RUN chown -R appuser:appuser /app
+
+# Переключитесь на пользователя
 USER appuser
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

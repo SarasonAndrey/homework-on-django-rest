@@ -2,6 +2,7 @@ name: Deploy to Production
 
 on:
   push:
+    branches: [ main, develop ]
 
 jobs:
   test:
@@ -26,12 +27,28 @@ jobs:
         run: |
           python manage.py test --verbosity=2
 
-  deploy:
+  build-docker:
     needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t lms-web .
+
+  deploy:
+    needs: build-docker
     runs-on: ubuntu-latest
     if: success()
     steps:
-      - name: Checkout code (for consistency)
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up SSH agent
@@ -39,45 +56,23 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy to server
+      - name: Deploy via Docker Compose
         run: |
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
           ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} -p ${{ secrets.SSH_PORT }} << 'EOF'
-          echo "Начинаем деплой..."
+          echo "Начинаем деплой через Docker Compose..."
 
           cd /home/ubuntu/homework-on-django-rest
 
-          
+          # Получаем последний коммит
           git fetch origin
           git reset --hard origin/${{ github.ref_name }}
 
-        
-          export DEBUG=False
-          export SECRET_KEY=${{ secrets.SECRET_KEY }}
-          export DB_NAME=${{ secrets.DB_NAME }}
-          export DB_USER=${{ secrets.DB_USER }}
-          export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          
-          export CELERY_BROKER_URL=redis://localhost:6379/0
-          export CELERY_RESULT_BACKEND=redis://localhost:6379/0
-          export DEFAULT_FROM_EMAIL=test@lms.ru
+          # Останавливаем и удаляем старые контейнеры
+          docker-compose down
 
-        
-          source .venv/bin/activate
+          # Собираем и запускаем новые
+          docker-compose up -d --build
 
-          
-          pip install -r requirements.txt
-
-          
-          python manage.py migrate --noinput
-
-          
-          python manage.py collectstatic --noinput
-
-        
-          sudo systemctl restart lms-web
-          sudo systemctl restart lms-celery-worker
-          sudo systemctl restart lms-celery-beat
-
-          echo "Деплой завершён успешно!"
+          echo "Деплой завершён: контейнеры перезапущены"
           EOF

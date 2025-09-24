@@ -92,35 +92,39 @@ CELERY_TIMEZONE=Europe/Moscow
    ```
    celery -A config beat -l INFO
    ```
-   
+
 # Запуск через Docker Compose
+
 ## Проект использует Docker для развёртывания всех сервисов.
+
 1. Соберите и запустите контейнеры
 
    ```
    docker-compose up --build -d
    ```
-   
+
 2. Примените миграции (если не применены автоматически)
-   
+
    ```
    docker-compose exec web python manage.py migrate
    ```
-   
+
 3. Соберите статику
 
    ```
    docker-compose exec web python manage.py collectstatic --noinput
    ```
-   
+
 4. Создайте суперпользователя (для доступа к админке)
 
    ```
    docker-compose exec web python manage.py createsuperuser
    ```
-   
+
 # Проверка работоспособности сервисов
+
 ## После запуска проверьте каждый сервис:
+
 1. Проверьте статус контейнеров
    ```
    docker-compose ps
@@ -136,18 +140,18 @@ CELERY_TIMEZONE=Europe/Moscow
    docker-compose logs celery
    ```
    Должно быть: celery@... ready.
-                Connected to redis://redis:6379/0
+   Connected to redis://redis:6379/0
 4. Проверьте Celery Beat
    ```
    docker-compose logs celery-beat
    ```
    Должно быть: beat: Starting...
-                      Scheduler: Ready to go!
+   Scheduler: Ready to go!
 5. Проверьте PostgreSQL
    ```
    docker-compose exec db psql -U suser -d online_learning_platform
    ```
-   После входа выполните: 
+   После входа выполните:
    ```
    \dt
    ```
@@ -157,24 +161,52 @@ CELERY_TIMEZONE=Europe/Moscow
    ```
    Ожидаемый ответ: PONG
 
+# CI/CD и деплой
+
+## Проект автоматически:
+
+- Запускает тесты и линтинг
+- Проверяет сборку Docker-образа
+- Деплоится на сервер при успешной проверке
+
+# Требуемые секреты в GitHub:
+
+- SSH_PRIVATE_KEY — приватный ключ для доступа к серверу
+- SSH_USER — имя пользователя (обычно ubuntu)
+- SERVER_IP — IP-адрес сервера (например, 158.160.16.236)
+- SSH_PORT — порт SSH (обычно 22)
+- SECRET_KEY — Django SECRET_KEY
+- STRIPE_API_KEY — тестовый ключ Stripe
+
+# Сервер
+
+## На сервере должны быть установлены:
+
+   `curl -fsSL https://get.docker.com | sudo sh`
+   `sudo usermod -aG docker ubuntu`
+
+   `sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose`
+   
+   `sudo chmod +x /usr/local/bin/docker-compose`
+
 # Доступ к приложению
 
-   Основное приложение: http://localhost:8000
+Основное приложение: http://localhost:8000
 
-   Админка: http://localhost:8000/admin/
+Админка: http://localhost:8000/admin/
 
-   Swagger: http://localhost:8000/swagger/
+Swagger: http://localhost:8000/swagger/
 
-   ReDoc: http://localhost:8000/redoc/
+ReDoc: http://localhost:8000/redoc/
 
 # Настройка удалённого сервера (Yandex Cloud)
 
 1. Создана ВМ с Ubuntu 24.04 LTS, 2 vCPU, 2 ГБ RAM
 2. Настроен SSH-доступ с использованием RSA-ключа (4096 бит)
 3. Установлены:
-   - Docker
-   - Docker Compose
-   - Git
+    - Docker
+    - Docker Compose
+    - Git
 4. Проект развёрнут через ``` docker-compose up --build -d ```
 5. Сервер доступен по публично
 
